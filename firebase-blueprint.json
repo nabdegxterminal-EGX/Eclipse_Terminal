@@ -1,0 +1,181 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile containing plan, display name, and preferences.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "plan": { "type": "string", "enum": ["free", "pro"] },
+        "planExpiresAt": { "type": "string" },
+        "lang": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "plan", "createdAt", "updatedAt"]
+    },
+    "UserRole": {
+      "title": "UserRole",
+      "description": "Administrative role mapping for role-based access control.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "role", "createdAt"]
+    },
+    "PriceAlert": {
+      "title": "PriceAlert",
+      "description": "Stock price alert configured by a trader.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "symbol": { "type": "string" },
+        "kind": { "type": "string", "enum": ["target", "stop"] },
+        "threshold": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "repeatAlert": { "type": "boolean" },
+        "notifyInApp": { "type": "boolean" },
+        "notifyBrowser": { "type": "boolean" },
+        "note": { "type": "string" },
+        "lastTriggeredAt": { "type": "string" },
+        "lastTriggeredPrice": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "symbol", "kind", "threshold", "isActive", "createdAt", "updatedAt"]
+    },
+    "PaperHolding": {
+      "title": "PaperHolding",
+      "description": "Paper trading portfolio position for a stock.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "symbol": { "type": "string" },
+        "shares": { "type": "number" },
+        "avgPrice": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "symbol", "shares", "avgPrice", "createdAt", "updatedAt"]
+    },
+    "PaperTrade": {
+      "title": "PaperTrade",
+      "description": "Executed paper trade order record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "symbol": { "type": "string" },
+        "side": { "type": "string", "enum": ["buy", "sell"] },
+        "shares": { "type": "number" },
+        "price": { "type": "number" },
+        "total": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "symbol", "side", "shares", "price", "total", "createdAt"]
+    },
+    "PaperWallet": {
+      "title": "PaperWallet",
+      "description": "Cash balance for paper trading accounts.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "cashBalance": { "type": "number" },
+        "startingBalance": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "cashBalance", "startingBalance", "createdAt", "updatedAt"]
+    },
+    "StockSymbol": {
+      "title": "StockSymbol",
+      "description": "Catalog of listed EGX stocks with live price references.",
+      "type": "object",
+      "properties": {
+        "symbol": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "nameAr": { "type": "string" },
+        "sector": { "type": "string" },
+        "indices": { "type": "array" },
+        "price": { "type": "number" },
+        "changePct": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["symbol", "nameEn", "nameAr", "price", "isActive", "updatedAt"]
+    },
+    "ChatThread": {
+      "title": "ChatThread",
+      "description": "AI conversation thread for EGX financial intelligence.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "createdAt", "updatedAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Single message inside an AI chat thread.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "threadId": { "type": "string" },
+        "userId": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "assistant", "system"] },
+        "content": { "type": "string" },
+        "parts": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "threadId", "userId", "role", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/profiles/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile with plan, preferences and identity."
+    },
+    "/user_roles/{userId}": {
+      "schema": { "$ref": "#/entities/UserRole" },
+      "description": "User roles determining administrative privileges."
+    },
+    "/price_alerts/{alertId}": {
+      "schema": { "$ref": "#/entities/PriceAlert" },
+      "description": "Configured trader price threshold alerts."
+    },
+    "/paper_wallets/{userId}": {
+      "schema": { "$ref": "#/entities/PaperWallet" },
+      "description": "Paper trading cash balance and portfolio value tracker."
+    },
+    "/paper_holdings/{holdingId}": {
+      "schema": { "$ref": "#/entities/PaperHolding" },
+      "description": "Open paper trading stock holdings."
+    },
+    "/paper_trades/{tradeId}": {
+      "schema": { "$ref": "#/entities/PaperTrade" },
+      "description": "Historical execution log of paper trades."
+    },
+    "/stock_symbols/{symbol}": {
+      "schema": { "$ref": "#/entities/StockSymbol" },
+      "description": "Egyptian Stock Exchange active ticker catalog and live price data."
+    },
+    "/chat_threads/{threadId}": {
+      "schema": { "$ref": "#/entities/ChatThread" },
+      "description": "User AI assistant conversation threads."
+    },
+    "/chat_threads/{threadId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Messages belonging to an AI chat thread."
+    }
+  }
+}

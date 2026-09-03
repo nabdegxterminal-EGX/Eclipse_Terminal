@@ -1,0 +1,172 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Catch-All Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAppAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email.lower() == 'sohailelnaggar551@gmail.com' ||
+        request.auth.token.email.lower() == 'yasserxhacker@gmail.com' ||
+        request.auth.token.email.lower() == 'montasserelnaggar69@gmail.com' ||
+        exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
+    function isValidId(docId) {
+      return docId is string && docId.size() > 0 && docId.size() <= 128 && docId.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 2. User Profile Rules
+    match /profiles/{userId} {
+      allow get: if isOwner(userId) || isAppAdmin();
+      allow list: if isAppAdmin();
+      allow create: if isOwner(userId) &&
+        request.resource.data.keys().hasAll(['id', 'email', 'plan', 'createdAt', 'updatedAt']) &&
+        request.resource.data.id == userId &&
+        request.resource.data.email is string &&
+        request.resource.data.plan in ['free', 'pro'] &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+      allow update: if (isOwner(userId) || isAppAdmin()) &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.updatedAt == request.time;
+      allow delete: if isAppAdmin();
+    }
+
+    // 3. User Roles Rules
+    match /user_roles/{userId} {
+      allow get: if isOwner(userId) || isAppAdmin();
+      allow list: if isAppAdmin();
+      allow create, update, delete: if isAppAdmin();
+    }
+
+    // 4. Price Alerts Rules
+    match /price_alerts/{alertId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.symbol is string && request.resource.data.symbol.size() <= 20 &&
+        request.resource.data.kind in ['target', 'stop'] &&
+        request.resource.data.threshold is number &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+      allow update: if isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.updatedAt == request.time;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 5. Paper Wallets Rules
+    match /paper_wallets/{userId} {
+      allow get: if isOwner(userId) || isAppAdmin();
+      allow list: if isAppAdmin();
+      allow create: if isOwner(userId) &&
+        request.resource.data.userId == userId &&
+        request.resource.data.cashBalance is number &&
+        request.resource.data.startingBalance is number &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+      allow update: if isOwner(userId) &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.updatedAt == request.time;
+      allow delete: if isAppAdmin();
+    }
+
+    // 6. Paper Holdings Rules
+    match /paper_holdings/{holdingId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.symbol is string && request.resource.data.symbol.size() <= 20 &&
+        request.resource.data.shares is number &&
+        request.resource.data.avgPrice is number &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+      allow update: if isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.updatedAt == request.time;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 7. Paper Trades Rules
+    match /paper_trades/{tradeId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.symbol is string && request.resource.data.symbol.size() <= 20 &&
+        request.resource.data.side in ['buy', 'sell'] &&
+        request.resource.data.shares is number &&
+        request.resource.data.price is number &&
+        request.resource.data.total is number &&
+        request.resource.data.createdAt == request.time;
+      allow update, delete: if false; // Trades are immutable audit records
+    }
+
+    // 8. Stock Symbols Rules (Public read, admin write)
+    match /stock_symbols/{symbol} {
+      allow get, list: if true;
+      allow create, update, delete: if isAppAdmin();
+    }
+
+    // 9. Chat Threads Rules
+    match /chat_threads/{threadId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.title is string && request.resource.data.title.size() <= 200 &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+      allow update: if isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.updatedAt == request.time;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      // 10. Messages Subcollection
+      match /messages/{messageId} {
+        allow get: if isSignedIn() &&
+          get(/databases/$(database)/documents/chat_threads/$(threadId)).data.userId == request.auth.uid;
+        allow list: if isSignedIn() &&
+          get(/databases/$(database)/documents/chat_threads/$(threadId)).data.userId == request.auth.uid;
+        allow create: if isSignedIn() &&
+          get(/databases/$(database)/documents/chat_threads/$(threadId)).data.userId == request.auth.uid &&
+          request.resource.data.userId == request.auth.uid &&
+          request.resource.data.threadId == threadId &&
+          request.resource.data.role in ['user', 'assistant', 'system'] &&
+          request.resource.data.content is string && request.resource.data.content.size() <= 50000 &&
+          request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+    }
+  }
+}

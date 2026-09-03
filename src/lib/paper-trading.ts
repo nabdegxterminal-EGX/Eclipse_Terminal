@@ -103,6 +103,8 @@ export function usePaperPortfolio() {
   );
 
   const stats = useMemo(() => {
+    // Reference pricesUpdatedAt to ensure calculation updates on each live price tick
+    void pricesUpdatedAt;
     const rows = holdings.map((h) => {
       const price = marketPrice(h.symbol) || h.avg_price;
       const value = price * h.shares;
